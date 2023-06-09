@@ -1,6 +1,6 @@
 services:
   web:
-    image: docker.cloudsmith.io/dbp-test/webhook-test-app/webhook-test-app
+    image: dapbek.jfrog.io/default-docker/webhook-test-app
     environment:
       POSTGRES_USER: "${PGUSER}"
       POSTGRES_PASSWORD: "${PGPASSWORD}"
