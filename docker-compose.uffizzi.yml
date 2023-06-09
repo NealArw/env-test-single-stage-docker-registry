@@ -1,6 +1,6 @@
 services:
   web:
-    image: dapbek.jfrog.io/default-docker//webhooks-test-app
+    image: dapbek.jfrog.io/default-docker/webhooks-test-app
     environment:
       POSTGRES_USER: "${PGUSER}"
       POSTGRES_PASSWORD: "${PGPASSWORD}"
