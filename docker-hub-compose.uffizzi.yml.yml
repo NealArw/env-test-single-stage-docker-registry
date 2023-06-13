@@ -1,6 +1,6 @@
 services:
-  web:
-    image: docker.cloudsmith.io/dbp-test/webhook-test-app/webhook-test-app
+  webhooks-test-app:
+    image: uffizzitest/webhooks-test-app
     environment:
       POSTGRES_USER: "${PGUSER}"
       POSTGRES_PASSWORD: "${PGPASSWORD}"
@@ -8,10 +8,9 @@ services:
 
 x-uffizzi:
   ingress:
-    service: web
+    service: webhooks-test-app
     port: 80
   continuous_preview:
-    share_to_github: true
     delete_preview_after: 1h
     delete_preview_when_pull_request_is_closed: true
     deploy_preview_when_pull_request_is_opened: true

@@ -5,12 +5,12 @@ on:
     types: [opened,reopened,synchronize,closed]
 
 jobs:
-  render-compose-file:
-    name: Render Docker Compose File
+  docker-hub-compose-file:
+    name: Render Docker Compose File For DockerHub
     runs-on: ubuntu-latest
     outputs:
-      compose-file-cache-key: ${{ env.COMPOSE_FILE_HASH }}
-      compose-file-cache-path: docker-compose.rendered.yml
+      compose-file-cache-key: ${{ env.DOCKERHUB_COMPOSE_FILE_HASH }}
+      compose-file-cache-path: docker-hub-compose.rendered.yml
     steps:
       - name: Checkout git repo
         uses: actions/checkout@v3
@@ -21,43 +21,73 @@ jobs:
           PGPASSWORD=${{ secrets.PGPASSWORD }}
           export PGPASSWORD
           # Render simple template from environment variables.
-          envsubst < docker-compose.uffizzi.yml > docker-compose.rendered.yml
-          cat docker-compose.rendered.yml
+          envsubst < docker-hub-compose.uffizzi.yml > docker-hub-compose.rendered.yml
+          cat docker-hub-compose.rendered.yml
       - name: Hash Rendered Compose File
         id: hash
-        run: echo "COMPOSE_FILE_HASH=$(md5sum docker-compose.rendered.yml | awk '{ print $1 }')" >> $GITHUB_ENV
+        run: echo "DOCKERHUB_COMPOSE_FILE_HASH=$(md5sum docker-hub-compose.rendered.yml | awk '{ print $1 }')" >> $GITHUB_ENV
       - name: Cache Rendered Compose File
         uses: actions/cache@v3
         with:
-          path: docker-compose.rendered.yml
-          key: ${{ env.COMPOSE_FILE_HASH }}
+          path: docker-hub-compose.rendered.yml
+          key: ${{ env.DOCKERHUB_COMPOSE_FILE_HASH }}
+        
+  ecr-compose-file:
+    name: Render Docker Compose File For ECR
+    runs-on: ubuntu-latest
+    outputs:
+      compose-file-cache-key: ${{ env.ECR_COMPOSE_FILE_HASH }}
+      compose-file-cache-path: ecr-compose.rendered.yml
+    steps:
+      - name: Checkout git repo
+        uses: actions/checkout@v3
+      - name: Render Compose File
+        run: |
+          PGUSER=${{ secrets.PGUSER }}
+          export PGUSER
+          PGPASSWORD=${{ secrets.PGPASSWORD }}
+          export PGPASSWORD
+          # Render simple template from environment variables.
+          envsubst < ecr-compose.uffizzi.yml > ecr-compose.rendered.yml
+          cat ecr-compose.rendered.yml
+      - name: Hash Rendered Compose File
+        id: hash
+        run: echo "ECR_COMPOSE_FILE_HASH=$(md5sum ecr-compose.rendered.yml | awk '{ print $1 }')" >> $GITHUB_ENV
+      - name: Cache Rendered Compose File
+        uses: actions/cache@v3
+        with:
+          path: ecr-compose.rendered.yml
+          key: ${{ env.ECR_COMPOSE_FILE_HASH }}
 
-  deploy-uffizzi-preview:
-    name: Use Remote Workflow to Preview on Uffizzi
-    needs: render-compose-file
+  deploy-uffizzi-preview-from-docker-hub:
+    name: Use Remote Workflow to Preview on Uffizzi from docker-hub
+    needs: docker-hub-compose-file
     uses: UffizziCloud/preview-action/.github/workflows/reusable.yaml@master
     with:
-      compose-file-cache-key: ${{ needs.render-compose-file.outputs.compose-file-cache-key }}
-      compose-file-cache-path: ${{ needs.render-compose-file.outputs.compose-file-cache-path }}
+      compose-file-cache-key: ${{ needs.docker-hub-compose-file.outputs.compose-file-cache-key }}
+      compose-file-cache-path: ${{ needs.docker-hub-compose-file.outputs.compose-file-cache-path }}
       server: https://app.uffizzi.com
     permissions:
       contents: read
       pull-requests: write
       id-token: write
     secrets:
-      docker-registry-username: ${{ secrets.DOCKER_REGISTRY_USERNAME}}
-      docker-registry-password: ${{ secrets.DOCKER_REGISTRY_PASSWORD}}
-      docker-registry-url: ${{ secrets.DOCKER_REGISTRY_URL}}
-      
-  delete-uffizzi-preview:
-    name: Use Remote Workflow to Delete an Existing Preview
+      dockerhub-username: ${{ secrets.DOCKERHUB_USERNAME}}
+      dockerhub-password: ${{ secrets.DOCKERHUB_PASSWORD}}
+
+  deploy-uffizzi-preview-from-ecr:
+    name: Use Remote Workflow to Preview on Uffizzi from docker-hub
+    needs: ecr-compose-file
     uses: UffizziCloud/preview-action/.github/workflows/reusable.yaml@master
-    if: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' }}
     with:
-      compose-file-cache-key: ''
-      compose-file-cache-path: docker-compose.rendered.yml
+      compose-file-cache-key: ${{ needs.ecr-compose-file.outputs.compose-file-cache-key }}
+      compose-file-cache-path: ${{ needs.ecr-compose-file.outputs.compose-file-cache-path }}
       server: https://app.uffizzi.com
     permissions:
       contents: read
       pull-requests: write
       id-token: write
+    secrets:
+      aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID}}
+      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+      aws-registry-url: ${{ secrets.AWS_REGISTRY_URL}}
