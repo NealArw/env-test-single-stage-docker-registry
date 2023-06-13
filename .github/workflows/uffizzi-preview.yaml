@@ -32,12 +32,12 @@ jobs:
           path: docker-hub-compose.rendered.yml
           key: ${{ env.DOCKERHUB_COMPOSE_FILE_HASH }}
         
-  ecr-compose-file:
+  docker-registry-compose-file:
     name: Render Docker Compose File For ECR
     runs-on: ubuntu-latest
     outputs:
-      compose-file-cache-key: ${{ env.ECR_COMPOSE_FILE_HASH }}
-      compose-file-cache-path: ecr-compose.rendered.yml
+      compose-file-cache-key: ${{ env.DOCKER_REGISTRY_COMPOSE_FILE_HASH }}
+      compose-file-cache-path: docker-registry-compose.rendered.yml
     steps:
       - name: Checkout git repo
         uses: actions/checkout@v3
@@ -48,16 +48,16 @@ jobs:
           PGPASSWORD=${{ secrets.PGPASSWORD }}
           export PGPASSWORD
           # Render simple template from environment variables.
-          envsubst < ecr-compose.uffizzi.yml > ecr-compose.rendered.yml
-          cat ecr-compose.rendered.yml
+          envsubst < docker-registry-compose.uffizzi.yml > docker-registry-compose.rendered.yml
+          cat docker-registry-compose.rendered.yml
       - name: Hash Rendered Compose File
         id: hash
-        run: echo "ECR_COMPOSE_FILE_HASH=$(md5sum ecr-compose.rendered.yml | awk '{ print $1 }')" >> $GITHUB_ENV
+        run: echo "ECR_COMPOSE_FILE_HASH=$(md5sum docker-registry-compose.rendered.yml | awk '{ print $1 }')" >> $GITHUB_ENV
       - name: Cache Rendered Compose File
         uses: actions/cache@v3
         with:
-          path: ecr-compose.rendered.yml
-          key: ${{ env.ECR_COMPOSE_FILE_HASH }}
+          path: docker-registry-compose.rendered.yml
+          key: ${{ env.DOCKER_REGISTRY_COMPOSE_FILE_HASH }}
 
   deploy-uffizzi-preview-from-docker-hub:
     name: Use Remote Workflow to Preview on Uffizzi from docker-hub
@@ -77,17 +77,17 @@ jobs:
 
   deploy-uffizzi-preview-from-ecr:
     name: Use Remote Workflow to Preview on Uffizzi from docker-hub
-    needs: ecr-compose-file
+    needs: docker-registry-compose-file
     uses: UffizziCloud/preview-action/.github/workflows/reusable.yaml@master
     with:
-      compose-file-cache-key: ${{ needs.ecr-compose-file.outputs.compose-file-cache-key }}
-      compose-file-cache-path: ${{ needs.ecr-compose-file.outputs.compose-file-cache-path }}
+      compose-file-cache-key: ${{ needs.docker-registry-compose-file.outputs.compose-file-cache-key }}
+      compose-file-cache-path: ${{ needs.docker-registry-compose-file.outputs.compose-file-cache-path }}
       server: https://app.uffizzi.com
     permissions:
       contents: read
       pull-requests: write
       id-token: write
     secrets:
-      aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID}}
-      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
-      aws-registry-url: ${{ secrets.AWS_REGISTRY_URL}}
+      docker-registry-username: ${{ secrets.DOCKER_REGISTRY_USERNAME}}
+      docker-registry-password: ${{ secrets.DOCKER_REGISTRY_PASSWORD}}
+      docker-registry-url: ${{ secrets.DOCKER_REGISTRY_URL}}
