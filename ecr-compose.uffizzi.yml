@@ -1,0 +1,16 @@
+services:
+  webhooks-test-app:
+    image: 263049488290.dkr.ecr.us-east-1.amazonaws.com/webhooks-test-app
+    environment:
+      POSTGRES_USER: "${PGUSER}"
+      POSTGRES_PASSWORD: "${PGPASSWORD}"
+      TEST_ENV: test_env
+
+x-uffizzi:
+  ingress:
+    service: webhooks-test-app
+    port: 80
+  continuous_preview:
+    delete_preview_after: 1h
+    delete_preview_when_pull_request_is_closed: true
+    deploy_preview_when_pull_request_is_opened: true
