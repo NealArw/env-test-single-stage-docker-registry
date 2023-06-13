@@ -1,6 +1,6 @@
 services:
   webhooks-test-app:
-    image: 263049488290.dkr.ecr.us-east-1.amazonaws.com/webhooks-test-app
+    image: cloud.canister.io:5000/uffizzitest/webhooks-test-app
     environment:
       POSTGRES_USER: "${PGUSER}"
       POSTGRES_PASSWORD: "${PGPASSWORD}"
